@@ -24,34 +24,53 @@
   </div>
 
 <script>
-  document.getElementById('lotto-form').addEventListener('submit', async function (e) {
-    e.preventDefault();
+document.getElementById('lotto-form').addEventListener('submit', async function (e) {
+  e.preventDefault();
 
-    const form = new FormData();
-    const imageInput = document.getElementById('image');
-    const numbers = document.getElementById('numbers').value;
+  const form = new FormData();
+  form.append('image', document.getElementById('image').files[0]);
+  form.append('numbers', document.getElementById('numbers').value);
 
-    form.append('image', imageInput.files[0]);
-    form.append('numbers', numbers);
+  try {
+    const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
+      method: 'POST',
+      body: form
+    });
 
-    try {
-      const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
-        method: 'POST',
-        body: form
-      });
+    if (!response.ok) throw new Error('Fehler beim Senden');
 
-      if (!response.ok || !response.headers.get('content-type')?.includes('image')) {
-        throw new Error('Server hat kein Bild zurückgegeben');
+    const contentType = response.headers.get('content-type');
+    const boundaryMatch = contentType.match(/boundary="?([^=";]+)"?/);
+
+    if (!boundaryMatch) throw new Error('Keine gültige multipart-Antwort erhalten');
+
+    const boundary = boundaryMatch[1];
+    const buffer = await response.arrayBuffer();
+    const text = new TextDecoder().decode(buffer);
+    const parts = text.split(`--${boundary}`).filter(p => p.trim() && p.trim() !== '--');
+
+    let imageData = null, jsonData = null;
+
+    for (const part of parts) {
+      if (part.includes('Content-Type: image/jpeg')) {
+        const base64Data = part.split('\r\n\r\n')[1].trim();
+        const imageBytes = new Uint8Array([...base64Data].map(c => c.charCodeAt(0)));
+        const blob = new Blob([imageBytes], { type: 'image/jpeg' });
+        imageData = URL.createObjectURL(blob);
+      } else if (part.includes('Content-Type: application/json')) {
+        const jsonStr = part.split('\r\n\r\n')[1].trim();
+        jsonData = JSON.parse(jsonStr);
       }
-
-      const blob = await response.blob();
-      const imgURL = URL.createObjectURL(blob);
-      document.getElementById('result-image').src = imgURL;
-      document.getElementById('json-output').textContent = "Bild erfolgreich verarbeitet!";
-    } catch (err) {
-      alert('Fehler bei der Antwort vom Server:\n' + err.message);
     }
-  });
+
+    if (imageData) document.getElementById('result-image').src = imageData;
+    if (jsonData) document.getElementById('json-output').textContent =
+      'Erkannte Zahlen: ' + JSON.stringify(jsonData.recognized);
+
+  } catch (err) {
+    alert('Fehler bei der Antwort vom Server:\n' + err.message);
+  }
+});
 </script>
 </body>
 </html>
