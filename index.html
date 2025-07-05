@@ -2,75 +2,92 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Lotto Checker</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Lotto Checker Web</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2em;
+      background: #f2f2f2;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 2em;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input[type="file"], input[type="text"], button {
+      display: block;
+      width: 100%;
+      margin: 1em 0;
+      padding: 0.7em;
+      font-size: 1em;
+    }
+    img {
+      margin-top: 2em;
+      max-width: 100%;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+    }
+    .error {
+      color: red;
+      margin-top: 1em;
+    }
+  </style>
 </head>
 <body>
-  <h1>📸 Lotto Checker</h1>
-  <form id="lotto-form">
-    <label for="image">Bild auswählen:</label>
-    <input type="file" id="image" accept="image/*" required><br><br>
-
-    <label for="numbers">Gezogene Zahlen (z.B. 3,7,12...):</label>
-    <input type="text" id="numbers" placeholder="z.B. 4,8,15,16,23,42" required><br><br>
-
-    <button type="submit">Senden</button>
-  </form>
-
-  <div id="result">
-    <h2>Ergebnis:</h2>
-    <img id="result-image" alt="Ergebnisbild wird hier angezeigt...">
-    <pre id="json-output"></pre>
+  <div class="container">
+    <h1>Lotto Checker 🧾</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <input type="text" id="numbersInput" placeholder="Gezogene Zahlen, z.B. 1,2,3,4,5,6">
+    <button onclick="submitForm()">Prüfen</button>
+    <div id="error" class="error"></div>
+    <img id="resultImage" style="display:none;">
   </div>
 
-<script>
-document.getElementById('lotto-form').addEventListener('submit', async function (e) {
-  e.preventDefault();
+  <script>
+    async function submitForm() {
+      const imageInput = document.getElementById('imageInput');
+      const numbersInput = document.getElementById('numbersInput');
+      const errorDiv = document.getElementById('error');
+      const resultImage = document.getElementById('resultImage');
 
-  const form = new FormData();
-  form.append('image', document.getElementById('image').files[0]);
-  form.append('numbers', document.getElementById('numbers').value);
+      errorDiv.textContent = '';
+      resultImage.style.display = 'none';
+      resultImage.src = '';
 
-  try {
-    const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
-      method: 'POST',
-      body: form
-    });
+      if (!imageInput.files.length || !numbersInput.value.trim()) {
+        errorDiv.textContent = 'Bitte Bild und Zahlen angeben.';
+        return;
+      }
 
-    if (!response.ok) throw new Error('Fehler beim Senden');
+      const formData = new FormData();
+      formData.append('image', imageInput.files[0]);
+      formData.append('numbers', numbersInput.value.trim());
 
-    const contentType = response.headers.get('content-type');
-    const boundaryMatch = contentType.match(/boundary="?([^=";]+)"?/);
+      try {
+        const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
+          method: 'POST',
+          body: formData,
+        });
 
-    if (!boundaryMatch) throw new Error('Keine gültige multipart-Antwort erhalten');
+        if (!response.ok) {
+          throw new Error('Serverfehler: ' + response.statusText);
+        }
 
-    const boundary = boundaryMatch[1];
-    const buffer = await response.arrayBuffer();
-    const text = new TextDecoder().decode(buffer);
-    const parts = text.split(`--${boundary}`).filter(p => p.trim() && p.trim() !== '--');
+        const blob = await response.blob();
+        resultImage.src = URL.createObjectURL(blob);
+        resultImage.style.display = 'block';
 
-    let imageData = null, jsonData = null;
-
-    for (const part of parts) {
-      if (part.includes('Content-Type: image/jpeg')) {
-        const base64Data = part.split('\r\n\r\n')[1].trim();
-        const imageBytes = new Uint8Array([...base64Data].map(c => c.charCodeAt(0)));
-        const blob = new Blob([imageBytes], { type: 'image/jpeg' });
-        imageData = URL.createObjectURL(blob);
-      } else if (part.includes('Content-Type: application/json')) {
-        const jsonStr = part.split('\r\n\r\n')[1].trim();
-        jsonData = JSON.parse(jsonStr);
+      } catch (err) {
+        errorDiv.textContent = 'Fehler bei der Anfrage: ' + err.message;
+        console.error(err);
       }
     }
-
-    if (imageData) document.getElementById('result-image').src = imageData;
-    if (jsonData) document.getElementById('json-output').textContent =
-      'Erkannte Zahlen: ' + JSON.stringify(jsonData.recognized);
-
-  } catch (err) {
-    alert('Fehler bei der Antwort vom Server:\n' + err.message);
-  }
-});
-</script>
+  </script>
 </body>
 </html>
