@@ -1,25 +1,20 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lotto Checker 🧾</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>Lotto Checker 🎯</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
-    <h1>Lotto Checker 🧾</h1>
-
-    <input type="file" id="fileInput" accept="image/*" />
-    <input type="text" id="numbersInput" placeholder="Zahlen eingeben, z. B. 4,5,6,10,18" />
-
-    <button id="checkBtn">Prüfen</button>
-
-    <div id="output">
-      <img id="resultImage" alt="Ergebnisbild wird hier angezeigt" />
+    <h1>Lotto Checker 📄</h1>
+    <input type="file" id="fileInput"><br>
+    <input type="text" id="numbersInput" placeholder="z. B. 4,5,6,10,18"><br>
+    <button onclick="checkLotto()">Prüfen</button>
+    <div id="result">
+      <img id="outputImage" src="" alt="Ergebnis wird hier angezeigt">
     </div>
   </div>
-
   <script src="script.js"></script>
 </body>
 </html>
