@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Lotto Checker 📄</title>
   <style>
     body {
@@ -95,18 +95,16 @@
 
         const buffer = await response.arrayBuffer();
         const text = new TextDecoder().decode(buffer);
-
         const parts = text.split(--${boundary});
-        const imagePart = parts.find(part =>
-          part.includes('Content-Type: image/jpeg') && part.includes('base64')
-        );
 
-        if (!imagePart) throw new Error("Kein base64-Abschnitt gefunden.");
+        // Suche den base64-kodierten JPEG-Bildabschnitt
+        const jpegPart = parts.find(p => p.includes('Content-Type: image/jpeg'));
+        if (!jpegPart) throw new Error("Kein JPEG-Abschnitt gefunden.");
 
-        const base64Match = imagePart.match(/base64\s+([\s\S]*)/);
-        if (!base64Match) throw new Error("Base64-Daten nicht extrahierbar.");
+        const base64Match = jpegPart.match(/base64\r?\n([\s\S]*)--/);
+        if (!base64Match) throw new Error("Kein base64-Abschnitt gefunden.");
 
-        const base64Data = base64Match[1].trim();
+        const base64Data = base64Match[1].replace(/\r?\n/g, '');
         resultImg.src = 'data:image/jpeg;base64,' + base64Data;
 
       } catch (err) {
