@@ -91,7 +91,7 @@
 
       const boundary = boundaryMatch[1];
       const buffer = await response.arrayBuffer();
-      const parts = new TextDecoder('utf-8').decode(buffer).split(--${boundary});
+      const parts = new TextDecoder('utf-8').decode(buffer).split(`--${boundary}`);
 
       const imagePart = parts.find(p => p.includes('Content-Type: image/jpeg'));
       if (!imagePart) throw new Error('Bildteil nicht gefunden.');
