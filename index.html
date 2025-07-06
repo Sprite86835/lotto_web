@@ -1,20 +1,112 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Lotto Checker 🎯</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lotto Checker 📄</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 500px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    input[type="file"],
+    input[type="text"],
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    img {
+      margin-top: 1rem;
+      max-width: 100%;
+      border: 1px solid #ddd;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>Lotto Checker 📄</h1>
-    <input type="file" id="fileInput"><br>
-    <input type="text" id="numbersInput" placeholder="z. B. 4,5,6,10,18"><br>
-    <button onclick="checkLotto()">Prüfen</button>
-    <div id="result">
-      <img id="outputImage" src="" alt="Ergebnis wird hier angezeigt">
-    </div>
+    <form id="checkForm">
+      <input type="file" id="image" accept="image/*" required />
+      <input type="text" id="numbers" placeholder="Gezogene Zahlen (z. B. 4,5,6,10,18)" required />
+      <button type="submit">Prüfen</button>
+    </form>
+    <img id="resultImage" alt="Ergebnis wird hier angezeigt" />
   </div>
-  <script src="script.js"></script>
+
+  <script>
+    document.getElementById('checkForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const imageInput = document.getElementById('image');
+      const numbersInput = document.getElementById('numbers');
+      const resultImg = document.getElementById('resultImage');
+
+      if (!imageInput.files.length || !numbersInput.value.trim()) {
+        alert("Bitte Bild und Zahlen eingeben.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('image', imageInput.files[0]);
+      formData.append('numbers', numbersInput.value);
+
+      try {
+        const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) throw new Error('Serverfehler');
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType.includes('multipart/mixed')) throw new Error('Unerwarteter Antworttyp');
+
+        const boundary = contentType.split('boundary=')[1];
+        const buffer = await response.arrayBuffer();
+
+        const decoder = new TextDecoder('utf-8');
+        const text = decoder.decode(buffer);
+
+        // Extrahiere das Bild aus der multipart/mixed-Antwort
+        const imageStart = text.indexOf('\r\n\r\n') + 4;
+        const imageBytes = new Uint8Array(buffer).slice(imageStart);
+
+        const base64 = btoa([...imageBytes].map(b => String.fromCharCode(b)).join(''));
+        resultImg.src = 'data:image/jpeg;base64,' + base64;
+
+      } catch (err) {
+        console.error(err);
+        resultImg.alt = "Fehler beim Laden des Ergebnisses.";
+        alert("Fehler bei der Serverantwort oder beim Anzeigen des Bildes.");
+      }
+    });
+  </script>
 </body>
 </html>
