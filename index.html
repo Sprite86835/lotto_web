@@ -78,7 +78,7 @@
       formData.append('numbers', numbersInput.value);
 
       try {
-        const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
+const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
           method: 'POST',
           body: formData
         });
@@ -95,7 +95,7 @@
 
         const buffer = await response.arrayBuffer();
         const text = new TextDecoder().decode(buffer);
-        const parts = text.split('--${boundary}');
+        const parts = text.split(`--${boundary}`);
 
         // Suche den base64-kodierten JPEG-Bildabschnitt
         const jpegPart = parts.find(p => p.includes('Content-Type: image/jpeg'));
