@@ -86,10 +86,15 @@
       if (!response.ok) throw new Error('Serverfehler');
 
       const contentType = response.headers.get('content-type');
-      const boundaryMatch = contentType.match(/boundary="?([^=";]+)"?/);
-      if (!boundaryMatch) throw new Error('Boundary konnte nicht gefunden werden.');
+      console.log("Content-Type aus Header:", contentType);
 
+       const boundaryMatch = contentType.match(/boundary="?([^";]+)"?/);
+       if (!boundaryMatch) {
+       console.error("Fehler: Boundary konnte nicht gefunden werden.");
+       throw new Error("Boundary konnte nicht gefunden werden.");
+}
       const boundary = boundaryMatch[1];
+      console.log("Gefundene Boundary:", boundary);
       const buffer = await response.arrayBuffer();
       const parts = new TextDecoder('utf-8').decode(buffer).split(`--${boundary}`);
 
