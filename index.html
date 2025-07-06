@@ -83,26 +83,35 @@
           body: formData
         });
 
-        if (!response.ok) throw new Error('Serverfehler');
-
+        console.log("Status:", response.status);
         const contentType = response.headers.get('content-type');
+        console.log("Content-Type:", contentType);
+
+        if (!response.ok) throw new Error('Serverfehler');
         if (!contentType.includes('multipart/mixed')) throw new Error('Unerwarteter Antworttyp');
 
         const boundary = contentType.split('boundary=')[1];
         const buffer = await response.arrayBuffer();
-
         const decoder = new TextDecoder('utf-8');
-        const text = decoder.decode(buffer);
+        const fullText = decoder.decode(buffer);
 
-        // Extrahiere das Bild aus der multipart/mixed-Antwort
-        const imageStart = text.indexOf('\r\n\r\n') + 4;
-        const imageBytes = new Uint8Array(buffer).slice(imageStart);
+        console.log("Erste 500 Zeichen der Antwort:", fullText.slice(0, 500));
+        console.log("Gefundene Boundary:", boundary);
 
-        const base64 = btoa([...imageBytes].map(b => String.fromCharCode(b)).join(''));
-        resultImg.src = 'data:image/jpeg;base64,' + base64;
+        // 🧠 Bilddaten extrahieren
+        const startIndex = fullText.indexOf('\r\n\r\n') + 4;
+        const startByteOffset = new TextEncoder().encode(fullText.slice(0, startIndex)).length;
+        const imageBytes = new Uint8Array(buffer).slice(startByteOffset);
 
+        if (!imageBytes || imageBytes.length < 10) {
+          throw new Error("Keine Bilddaten extrahiert.");
+        }
+
+        const base64 = btoa(String.fromCharCode(...imageBytes));
+        resultImg.src = 'data:image/jpeg;base64,' + base64 + `?t=${Date.now()}`;
+        console.log("Bild erfolgreich geladen (Größe:", imageBytes.length, "Bytes)");
       } catch (err) {
-        console.error(err);
+        console.error("FEHLER:", err);
         resultImg.alt = "Fehler beim Laden des Ergebnisses.";
         alert("Fehler bei der Serverantwort oder beim Anzeigen des Bildes.");
       }
