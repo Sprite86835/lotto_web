@@ -61,61 +61,54 @@
   </div>
 
   <script>
-    document.getElementById('checkForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+  document.getElementById('checkForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-      const imageInput = document.getElementById('image');
-      const numbersInput = document.getElementById('numbers');
-      const resultImg = document.getElementById('resultImage');
+    const imageInput = document.getElementById('image');
+    const numbersInput = document.getElementById('numbers');
+    const resultImg = document.getElementById('resultImage');
 
-      if (!imageInput.files.length || !numbersInput.value.trim()) {
-        alert("Bitte Bild und Zahlen eingeben.");
-        return;
-      }
+    if (!imageInput.files.length || !numbersInput.value.trim()) {
+      alert("Bitte Bild und Zahlen eingeben.");
+      return;
+    }
 
-      const formData = new FormData();
-      formData.append('image', imageInput.files[0]);
-      formData.append('numbers', numbersInput.value);
+    const formData = new FormData();
+    formData.append('image', imageInput.files[0]);
+    formData.append('numbers', numbersInput.value);
 
-      try {
-        const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
-          method: 'POST',
-          body: formData
-        });
+    try {
+      const response = await fetch('https://lotto-checker-server.onrender.com/check_lotto', {
+        method: 'POST',
+        body: formData
+      });
 
-        console.log("Status:", response.status);
-        const contentType = response.headers.get('content-type');
-        console.log("Content-Type:", contentType);
+      if (!response.ok) throw new Error('Serverfehler');
 
-        if (!response.ok) throw new Error('Serverfehler');
-        if (!contentType.includes('multipart/mixed')) throw new Error('Unerwarteter Antworttyp');
+      const contentType = response.headers.get('content-type');
+      const boundaryMatch = contentType.match(/boundary="?([^=";]+)"?/);
+      if (!boundaryMatch) throw new Error('Boundary konnte nicht gefunden werden.');
 
-        const boundary = contentType.split('boundary=')[1];
-        const buffer = await response.arrayBuffer();
-        const decoder = new TextDecoder('utf-8');
-        const fullText = decoder.decode(buffer);
+      const boundary = boundaryMatch[1];
+      const buffer = await response.arrayBuffer();
+      const parts = new TextDecoder('utf-8').decode(buffer).split(--${boundary});
 
-        console.log("Erste 500 Zeichen der Antwort:", fullText.slice(0, 500));
-        console.log("Gefundene Boundary:", boundary);
+      const imagePart = parts.find(p => p.includes('Content-Type: image/jpeg'));
+      if (!imagePart) throw new Error('Bildteil nicht gefunden.');
 
-        // 🧠 Bilddaten extrahieren
-        const startIndex = fullText.indexOf('\r\n\r\n') + 4;
-        const startByteOffset = new TextEncoder().encode(fullText.slice(0, startIndex)).length;
-        const imageBytes = new Uint8Array(buffer).slice(startByteOffset);
+      // Base64-Daten extrahieren
+      const base64Start = imagePart.indexOf('base64,');
+      if (base64Start === -1) throw new Error('Kein base64-Abschnitt gefunden.');
 
-        if (!imageBytes || imageBytes.length < 10) {
-          throw new Error("Keine Bilddaten extrahiert.");
-        }
+      const base64Data = imagePart.substring(base64Start + 7).replace(/\s/g, '');
+      resultImg.src = 'data:image/jpeg;base64,' + base64Data;
 
-        const base64 = btoa(String.fromCharCode(...imageBytes));
-        resultImg.src = 'data:image/jpeg;base64,' + base64 + `?t=${Date.now()}`;
-        console.log("Bild erfolgreich geladen (Größe:", imageBytes.length, "Bytes)");
-      } catch (err) {
-        console.error("FEHLER:", err);
-        resultImg.alt = "Fehler beim Laden des Ergebnisses.";
-        alert("Fehler bei der Serverantwort oder beim Anzeigen des Bildes.");
-      }
-    });
-  </script>
+    } catch (err) {
+      console.error("FEHLER:", err);
+      resultImg.alt = "Fehler beim Laden des Ergebnisses.";
+      alert("Fehler bei der Serverantwort oder beim Anzeigen des Bildes.");
+    }
+  });
+</script>
 </body>
 </html>
